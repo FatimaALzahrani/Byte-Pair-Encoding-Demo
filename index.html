@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Byte Pair Encoding - Smart Text Analyzer</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap");
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", "Segoe UI", sans-serif;
+        background: #1a1a2e;
+        min-height: 100vh;
+        padding: 20px;
+        color: #333;
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(
+            circle at 20% 50%,
+            rgba(138, 43, 226, 0.15) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 80%,
+            rgba(30, 144, 255, 0.15) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 40% 20%,
+            rgba(255, 20, 147, 0.1) 0%,
+            transparent 50%
+          );
+        animation: backgroundShift 15s ease infinite;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      @keyframes backgroundShift {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.8;
+          transform: scale(1.1);
+        }
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
+      }
+
+      .header {
+        text-align: center;
+        color: white;
+        margin-bottom: 50px;
+        animation: fadeInDown 1s ease-out;
+      }
+
+      .header h1 {
+        font-size: 3.5em;
+        margin-bottom: 15px;
+        font-weight: 900;
+        background: linear-gradient(
+          135deg,
+          #667eea 0%,
+          #764ba2 50%,
+          #f093fb 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        background-size: 200% 200%;
+        animation: gradientShift 4s ease infinite;
+        position: relative;
+        display: inline-block;
+      }
+
+      @keyframes gradientShift {
+        0%,
+        100% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+      }
+
+      .header h1::after {
+        content: "";
+        position: absolute;
+        bottom: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60%;
+        height: 4px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          #667eea,
+          #764ba2,
+          transparent
+        );
+        border-radius: 2px;
+        animation: lineExpand 2s ease-in-out infinite;
+      }
+
+      @keyframes lineExpand {
+        0%,
+        100% {
+          width: 60%;
+          opacity: 0.6;
+        }
+        50% {
+          width: 80%;
+          opacity: 1;
+        }
+      }
+
+      .header p {
+        font-size: 1.3em;
+        opacity: 0.95;
+        margin-top: 20px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        animation: fadeIn 1.5s ease-out;
+      }
+
+      .input-section {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        border-radius: 25px;
+        padding: 40px;
+        box-shadow: 0 25px 70px rgba(0, 0, 0, 0.3),
+          0 0 0 1px rgba(255, 255, 255, 0.3);
+        margin-bottom: 40px;
+        animation: slideUpBounce 1s ease-out;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        transition: all 0.4s ease;
+      }
+
+      .input-section:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+      }
+
+      .input-group {
+        margin-bottom: 25px;
+      }
+
+      .input-group label {
+        display: block;
+        font-size: 1.2em;
+        font-weight: 700;
+        margin-bottom: 12px;
+        color: #2d3748;
+        position: relative;
+        animation: slideLeft 0.8s ease-out;
+      }
+
+      textarea {
+        width: 100%;
+        padding: 18px;
+        border: 2px solid #e2e8f0;
+        border-radius: 15px;
+        font-size: 1.05em;
+        resize: vertical;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        font-family: "Inter", monospace;
+        background: #f8fafc;
+        color: #1a202c;
+        min-height: 120px;
+        animation: fadeIn 1s ease-out;
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15),
+          0 8px 16px rgba(102, 126, 234, 0.2);
+        background: white;
+        transform: translateY(-2px);
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 18px 50px;
+        font-size: 1.2em;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        font-weight: 700;
+        position: relative;
+        overflow: hidden;
+        font-family: "Inter", sans-serif;
+        animation: float 3s ease-in-out infinite;
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0px);
+        }
+        50% {
+          transform: translateY(-5px);
+        }
+      }
+
+      .btn::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.3),
+          transparent
+        );
+        transition: left 0.5s;
+      }
+
+      .btn:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+        animation: none;
+      }
+
+      .btn:hover::before {
+        left: 100%;
+      }
+
+      .btn:active {
+        transform: translateY(-2px);
+      }
+
+      .results {
+        display: none;
+      }
+
+      .results.show {
+        display: block;
+        animation: fadeInUp 0.8s ease-out;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        border-radius: 25px;
+        padding: 35px;
+        margin-bottom: 30px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25),
+          0 0 0 1px rgba(255, 255, 255, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: scaleIn 0.6s ease-out;
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+      }
+
+      .card h2 {
+        color: #2d3748;
+        margin-bottom: 25px;
+        font-size: 2em;
+        padding-bottom: 15px;
+        position: relative;
+        font-weight: 900;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: slideLeft 0.6s ease-out;
+      }
+
+      .card h2::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100px;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        border-radius: 2px;
+        animation: expandWidth 1s ease-out;
+      }
+
+      @keyframes expandWidth {
+        0% {
+          width: 0;
+        }
+        100% {
+          width: 100px;
+        }
+      }
+
+      .step {
+        background: linear-gradient(135deg, #f6f8fb 0%, #eef2f7 100%);
+        padding: 25px;
+        border-radius: 18px;
+        margin-bottom: 20px;
+        border-left: 5px solid transparent;
+        border-image: linear-gradient(135deg, #667eea, #764ba2) 1;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        animation: slideInLeft 0.5s ease-out;
+      }
+
+      .step::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 5px;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        animation: heightGrow 0.6s ease-out;
+      }
+
+      @keyframes heightGrow {
+        0% {
+          height: 0;
+        }
+        100% {
+          height: 100%;
+        }
+      }
+
+      .step:hover {
+        transform: translateX(5px);
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+      }
+
+      .step-header {
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 15px;
+        font-size: 1.2em;
+      }
+
+      .merge-info {
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 25px;
+        margin: 5px;
+        font-family: "Courier New", monospace;
+        font-size: 1em;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+        position: relative;
+        animation: popIn 0.4s ease-out;
+      }
+
+      @keyframes popIn {
+        0% {
+          transform: scale(0);
+          opacity: 0;
+        }
+        50% {
+          transform: scale(1.1);
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      .merge-info:hover {
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+      }
+
+      .word-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 15px;
+      }
+
+      .word-item {
+        background: white;
+        padding: 12px 18px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        font-family: "Courier New", monospace;
+        transition: all 0.3s ease;
+        border: 2px solid #f0f4f8;
+        font-weight: 600;
+        color: #2d3748;
+        animation: fadeInScale 0.4s ease-out;
+      }
+
+      @keyframes fadeInScale {
+        0% {
+          opacity: 0;
+          transform: scale(0.8);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .word-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        border-color: #667eea;
+      }
+
+      .vocab-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+      }
+
+      .vocab-item {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 16px;
+        border-radius: 15px;
+        text-align: center;
+        font-family: "Courier New", monospace;
+        font-weight: 700;
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.35);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .vocab-item::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 0.3) 0%,
+          transparent 70%
+        );
+        transform: scale(0);
+        transition: transform 0.5s;
+      }
+
+      .vocab-item:hover::before {
+        transform: scale(2);
+      }
+
+      .vocab-item:hover {
+        transform: translateY(-5px) scale(1.05);
+        box-shadow: 0 12px 30px rgba(102, 126, 234, 0.5);
+      }
+
+      .final-result {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 18px;
+        font-size: 1.15em;
+        margin-top: 20px;
+        box-shadow: 0 10px 30px rgba(17, 153, 142, 0.4);
+        font-weight: 600;
+        line-height: 1.8;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        animation: slideInRight 0.6s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes slideUpBounce {
+        0% {
+          opacity: 0;
+          transform: translateY(50px);
+        }
+        60% {
+          transform: translateY(-10px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes slideLeft {
+        from {
+          opacity: 0;
+          transform: translateX(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes slideInLeft {
+        from {
+          opacity: 0;
+          transform: translateX(-30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes slideInRight {
+        from {
+          opacity: 0;
+          transform: translateX(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes scaleIn {
+        0% {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .loading {
+        text-align: center;
+        color: white;
+        font-size: 1.4em;
+        margin: 30px 0;
+        display: none;
+        font-weight: 700;
+      }
+
+      .loading.show {
+        display: block;
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.7;
+          transform: scale(1.05);
+        }
+      }
+
+      .loading::after {
+        content: "...";
+        animation: dots 1.5s infinite;
+      }
+
+      @keyframes dots {
+        0%,
+        20% {
+          content: ".";
+        }
+        40% {
+          content: "..";
+        }
+        60%,
+        100% {
+          content: "...";
+        }
+      }
+
+      @media (max-width: 768px) {
+        .header h1 {
+          font-size: 2.2em;
+        }
+
+        .header p {
+          font-size: 1.1em;
+        }
+
+        .vocab-grid {
+          grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+        }
+
+        .input-section {
+          padding: 25px;
+        }
+
+        .card {
+          padding: 25px;
+        }
+
+        .btn {
+          padding: 15px 35px;
+          font-size: 1.1em;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .header h1 {
+          font-size: 1.8em;
+        }
+
+        .vocab-grid {
+          grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Byte Pair Encoding</h1>
+      </div>
+
+      <div class="input-section">
+        <div class="input-group">
+          <label>Enter the text you want to analyze</label>
+          <textarea
+            id="inputText"
+            rows="4"
+            placeholder="Try for example: set new new renew reset renew"
+          >
+set new new renew reset renew</textarea
+          >
+        </div>
+        <button class="btn" onclick="processText()">Tokenize Text</button>
+      </div>
+
+      <div class="loading" id="loading">Processing text</div>
+
+      <div class="results" id="results">
+        <div class="card">
+          <h2>Merge Steps</h2>
+          <div id="stepsContainer"></div>
+        </div>
+
+        <!-- <div class="card">
+          <h2>Final Result</h2>
+          <div id="finalResult"></div>
+        </div> -->
+
+        <div class="card">
+          <h2>Vocabulary</h2>
+          <div class="vocab-grid" id="vocabContainer"></div>
+        </div>
+
+        <div class="card">
+          <h2>Learned Merge Operations</h2>
+          <div id="mergeOperations"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function bytePairEncoding(text) {
+        const words = text.trim().split(/\s+/);
+        let corpus = words.map((word) => ["_", ...word.split("")]);
+
+        const vocab = new Set();
+        corpus.forEach((word) => {
+          word.forEach((char) => vocab.add(char));
+        });
+
+        const mergeOperations = [];
+        const steps = [];
+
+        while (true) {
+          const pairs = {};
+
+          corpus.forEach((word) => {
+            for (let i = 0; i < word.length - 1; i++) {
+              const pair = word[i] + "|" + word[i + 1];
+              pairs[pair] = (pairs[pair] || 0) + 1;
+            }
+          });
+
+          if (Object.keys(pairs).length === 0) break;
+
+          let mostCommon = null;
+          let maxCount = 0;
+          for (const [pair, count] of Object.entries(pairs)) {
+            if (count > maxCount) {
+              maxCount = count;
+              mostCommon = pair;
+            }
+          }
+
+          if (maxCount < 2) break;
+
+          const [first, second] = mostCommon.split("|");
+          const merged = first + second;
+
+          mergeOperations.push({
+            pair: [first, second],
+            merged: merged,
+            count: maxCount,
+          });
+
+          const newCorpus = [];
+          corpus.forEach((word) => {
+            const newWord = [];
+            let i = 0;
+            while (i < word.length) {
+              if (
+                i < word.length - 1 &&
+                word[i] === first &&
+                word[i + 1] === second
+              ) {
+                newWord.push(merged);
+                i += 2;
+              } else {
+                newWord.push(word[i]);
+                i++;
+              }
+            }
+            newCorpus.push(newWord);
+          });
+
+          corpus = newCorpus;
+          vocab.add(merged);
+
+          steps.push({
+            merge: `${first} + ${second} → ${merged}`,
+            count: maxCount,
+            corpus: corpus.map((word) => [...word]),
+          });
+        }
+
+        return {
+          finalCorpus: corpus,
+          vocab: Array.from(vocab).sort(),
+          mergeOperations: mergeOperations,
+          steps: steps,
+        };
+      }
+
+      function processText() {
+        const inputText = document.getElementById("inputText").value;
+        if (!inputText.trim()) {
+          alert("Please enter text");
+          return;
+        }
+
+        const loading = document.getElementById("loading");
+        const results = document.getElementById("results");
+
+        loading.classList.add("show");
+        results.classList.remove("show");
+
+        setTimeout(() => {
+          const result = bytePairEncoding(inputText);
+
+          displaySteps(result.steps);
+          //   displayFinalResult(result.finalCorpus);
+          displayVocabulary(result.vocab);
+          displayMergeOperations(result.mergeOperations);
+
+          loading.classList.remove("show");
+          results.classList.add("show");
+
+          results.scrollIntoView({ behavior: "smooth" });
+        }, 300);
+      }
+
+      function displaySteps(steps) {
+        const container = document.getElementById("stepsContainer");
+        container.innerHTML = "";
+
+        steps.forEach((step, index) => {
+          const stepDiv = document.createElement("div");
+          stepDiv.className = "step";
+          stepDiv.style.animationDelay = `${index * 0.1}s`;
+
+          stepDiv.innerHTML = `
+                    <div class="step-header">Step ${index + 1}</div>
+                    <div style="margin: 10px 0;">
+                        <span class="merge-info">${step.merge}</span> 
+                        <span style="color: #2d3748; font-weight: 700; margin-left: 15px; font-size: 1.05em;">
+                            Count: ${step.count}
+                        </span>
+                    </div>
+                    <div class="word-list">
+                        ${step.corpus
+                          .map(
+                            (word) =>
+                              `<div class="word-item">${word.join(" ")}</div>`
+                          )
+                          .join("")}
+                    </div>
+                `;
+
+          container.appendChild(stepDiv);
+        });
+      }
+
+      //   function displayFinalResult(corpus) {
+      //     const container = document.getElementById("finalResult");
+      //     const words = corpus.map((word) => word.join(" ")).join(" | ");
+      //     container.innerHTML = `
+      //             <div style="font-size: 1.3em; font-weight: 700; margin-bottom: 10px; color: #2d3748;">
+      //                 Final Tokenization Result
+      //             </div>
+      //             <div class="final-result">${words}</div>
+      //         `;
+      //   }
+
+      function displayVocabulary(vocab) {
+        const container = document.getElementById("vocabContainer");
+        container.innerHTML = vocab
+          .map((item, index) => {
+            const delay = index * 0.03;
+            return `<div class="vocab-item" style="animation: slideUpBounce 0.5s ease-out ${delay}s both">${item}</div>`;
+          })
+          .join("");
+      }
+
+      function displayMergeOperations(operations) {
+        const container = document.getElementById("mergeOperations");
+        container.innerHTML = operations
+          .map(
+            (op, index) => `
+                <div class="step" style="animation-delay: ${index * 0.1}s">
+                    <div class="step-header">Operation ${index + 1}</div>
+                    <span class="merge-info">${op.pair[0]} + ${op.pair[1]} → ${
+              op.merged
+            }</span>
+                    <span style="color: #2d3748; font-weight: 700; margin-left: 15px; font-size: 1.05em;">
+                        Count: ${op.count}
+                    </span>
+                </div>
+            `
+          )
+          .join("");
+      }
+    </script>
+  </body>
+</html>
