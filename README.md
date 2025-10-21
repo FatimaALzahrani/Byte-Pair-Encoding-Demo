@@ -1,4 +1,4 @@
-![header](<https://capsule-render.vercel.app/api?type=cylinder&height=150&color=gradient&customColorList=22&text=Simple%20Byte%20Pair%20Encoding%20(BPE)%20Tokenizer&fontSize=40&animation=fadeIn>)
+![header](https://capsule-render.vercel.app/api?type=cylinder&height=150&color=gradient&customColorList=22&text=Simple%20Byte%20Pair%20Encoding%20(BPE)%20Tokenizer&fontSize=40&animation=fadeIn)
 
 # Simple Byte Pair Encoding (BPE) Tokenizer
 
@@ -24,6 +24,24 @@ BPE is widely used in transformer-based models such as:
 
 ---
 
+## Interactive Web Demo
+
+Experience BPE in action with our **interactive web interface**:
+
+ **[Try the Live Demo](https://fatimaalzahrani.github.io/Byte-Pair-Encoding-Demo/)**
+
+### Demo Features:
+
+- **Real-time Visualization** - Watch BPE algorithm work step-by-step
+- **Interactive Input** - Test with your own text
+- **Beautiful Animations** - Smooth transitions and dynamic effects
+- **Detailed Breakdown** - See merge operations, vocabulary growth, and final tokenization
+- **Responsive Design** - Works perfectly on desktop and mobile devices
+
+The web demo provides an intuitive way to understand how BPE constructs subword vocabularies through iterative merging.
+
+---
+
 ## Features
 
 - Simple character-level BPE logic
@@ -41,6 +59,7 @@ BPE is widely used in transformer-based models such as:
 | `bpe_tokenizer.py`   | Detailed BPE implementation with verbose logging |
 | `bpe_tokenizer_2.py` | Concise, functional BPE version                  |
 | `image.png`          | Visual explanation of BPE process                |
+| `index.html`         | Interactive web interface for BPE visualization  |
 
 ---
 
@@ -57,29 +76,24 @@ BPE is widely used in transformer-based models such as:
 ## BPE in Action
 
 ### Input:
-
 ```python
 "set new new renew reset renew"
 ```
 
 ### Example Output:
-
 ```python
 Merging: n e → ne (count 3)
-Updated Corpus:
-_ s e t
-_ ne w
-_ re ne w
-...
-Updated Vocabulary: ['_', 'e', 'n', 'ne', 'r', 's', 't', 'w']
-...
+Updated Corpus: _ s e t _ ne w _ re ne w ...
+Updated Vocabulary: ['_', 'e', 'n', 'ne', 'r', 's', 't', 'w'] ...
+
 Final Tokenized Corpus:
-_ s e t
-_ ne w
-_ re ne w
+  _ s e t
+  _ ne w
+  _ re ne w
 ...
+
 Learned Merge Operations:
-n e → ne (count 3)
+  n e → ne (count 3)
 ...
 ```
 
@@ -89,6 +103,7 @@ n e → ne (count 3)
 
 ## Example Usage
 
+### Python Implementation
 ```python
 from bpe_tokenizer import byte_pair_encoding
 
@@ -96,7 +111,6 @@ byte_pair_encoding("set new new renew reset renew")
 ```
 
 Or using the compact version:
-
 ```python
 from bpe_tokenizer_2 import byte_pair_encoding
 
@@ -104,6 +118,17 @@ vocab, encoded = byte_pair_encoding("set new new renew reset renew", num_merges=
 print(vocab)
 print(encoded)
 ```
+
+### Web Interface
+
+Simply open `index.html` in your browser or visit the [live demo](https://fatimaalzahrani.github.io/Byte-Pair-Encoding-Demo/) to:
+
+1. Enter your custom text
+2. Click "Analyze Text Now"
+3. Watch the algorithm visualize each merge step
+4. Explore the final vocabulary and tokenization results
+
+---
 
 ## Output Explanation
 
@@ -122,3 +147,6 @@ This makes the BPE tokenizer ideal for:
 - Handling rare or unseen tokens
 - Improving model generalization in NLP tasks
 - Reducing out-of-vocabulary (OOV) issues
+
+---
+
